@@ -12,6 +12,7 @@ class TasksController extends GetxController {
 
   var tasks = <TaskModel>[].obs;
   var isLoading = false.obs;
+
   var filterStatus = 'all'.obs;
 
   @override
@@ -20,13 +21,7 @@ class TasksController extends GetxController {
     if (_auth.currentUser != null) fetchTasks();
   }
 
-  Future<String?> _getToken() async {
-    try {
-      return await _auth.currentUser?.getIdToken();
-    } catch (e) {
-      return null;
-    }
-  }
+  Future<String?> _getToken() async => await _auth.currentUser?.getIdToken();
 
   Future<void> fetchTasks() async {
     final user = _auth.currentUser;
@@ -34,9 +29,7 @@ class TasksController extends GetxController {
     try {
       isLoading.value = true;
       final token = await _getToken();
-      final response = await http.get(
-          Uri.parse('$_dbUrl/users/${user.uid}/tasks.json?auth=$token')
-      );
+      final response = await http.get(Uri.parse('$_dbUrl/users/${user.uid}/tasks.json?auth=$token'));
 
       if (response.statusCode == 200 && response.body != 'null') {
         final Map<String, dynamic> decoded = json.decode(response.body);
@@ -46,66 +39,30 @@ class TasksController extends GetxController {
         });
         loaded.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         tasks.assignAll(loaded);
-      } else {
-        tasks.clear();
       }
     } finally {
       isLoading.value = false;
     }
   }
-  Future<bool> addTask({
-    required String title,
-    required String description,
-    required DateTime dueDate,
-    required String priority,
-  }) async {
+
+  Future<bool> addTask({required String title, required String description, required DateTime dueDate, required String priority}) async {
     final user = _auth.currentUser;
     if (user == null) return false;
-
     try {
       isLoading.value = true;
-      final token = await user.getIdToken();
+      final token = await _getToken();
       final taskId = const Uuid().v4();
-
-      final task = TaskModel(
-        id: taskId,
-        title: title,
-        description: description,
-        dueDate: dueDate,
-        priority: priority,
-        isCompleted: false,
-        createdAt: DateTime.now(),
-      );
-
-      final url = '$_dbUrl/users/${user.uid}/tasks/$taskId.json?auth=$token';
-
-      final res = await http.put(
-        Uri.parse(url),
-        body: json.encode(task.toMap()),
-      );
-
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        tasks.insert(0, task);
-        tasks.refresh();
-        return true;
-      } else {
-        Get.snackbar('Error', 'Server error. Check Firebase Rules.');
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Network error: $e');
-      return false;
+      final task = TaskModel(id: taskId, title: title, description: description, dueDate: dueDate, priority: priority, isCompleted: false, createdAt: DateTime.now());
+      await http.put(Uri.parse('$_dbUrl/users/${user.uid}/tasks/$taskId.json?auth=$token'), body: json.encode(task.toMap()));
+      tasks.insert(0, task);
+      Get.snackbar("Success", "Task Created", snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.green.withOpacity(0.1), colorText: Colors.green);
+      return true;
     } finally {
       isLoading.value = false;
     }
   }
-  Future<void> updateTask({
-    required String taskId,
-    required String title,
-    required String description,
-    required DateTime dueDate,
-    required String priority,
-  }) async {
+
+  Future<void> updateTask({required String taskId, required String title, required String description, required DateTime dueDate, required String priority}) async {
     final user = _auth.currentUser;
     if (user == null) return;
     try {
@@ -122,14 +79,10 @@ class TasksController extends GetxController {
       );
       final index = tasks.indexWhere((t) => t.id == taskId);
       if (index != -1) {
-        tasks[index] = tasks[index].copyWith(
-          title: title,
-          description: description,
-          dueDate: dueDate,
-          priority: priority,
-        );
+        tasks[index] = tasks[index].copyWith(title: title, description: description, dueDate: dueDate, priority: priority);
         tasks.refresh();
       }
+      Get.snackbar("Updated", "Task details saved", snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
     }
@@ -156,14 +109,17 @@ class TasksController extends GetxController {
     final token = await _getToken();
     await http.delete(Uri.parse('$_dbUrl/users/${user.uid}/tasks/$taskId.json?auth=$token'));
     tasks.removeWhere((t) => t.id == taskId);
+    Get.snackbar("Deleted", "Task removed", snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red.withOpacity(0.1), colorText: Colors.red);
   }
 
   void setFilterStatus(String status) => filterStatus.value = status;
+
   List<TaskModel> get filteredTasks {
     if (filterStatus.value == 'active') return tasks.where((t) => !t.isCompleted).toList();
     if (filterStatus.value == 'completed') return tasks.where((t) => t.isCompleted).toList();
     return tasks;
   }
+
   int get activeTasksCount => tasks.where((t) => !t.isCompleted).length;
   int get completedTasksCount => tasks.where((t) => t.isCompleted).length;
 }

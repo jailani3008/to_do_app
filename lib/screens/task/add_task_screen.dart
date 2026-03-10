@@ -40,6 +40,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     final border = dark ? Colors.white.withOpacity(0.08) : const Color(0xFFE5E7EB);
     final title  = dark ? Colors.white : const Color(0xFF111827);
     final sub    = dark ? Colors.white38 : const Color(0xFF6B7280);
+    final accentColor = Theme.of(context).primaryColor;
 
     return Scaffold(
       backgroundColor: bg,
@@ -80,7 +81,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   icon: Icons.calendar_today_outlined,
                   label: 'Due Date',
                   value: DateFormat('MMM d, yyyy').format(_selectedDate),
-                  card: card, border: border, title: title, sub: sub,
+                  card: card, border: border, title: title, sub: sub, accent: accentColor,
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: context,
@@ -97,7 +98,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   icon: Icons.access_time_outlined,
                   label: 'Due Time',
                   value: _selectedTime.format(context),
-                  card: card, border: border, title: title, sub: sub,
+                  card: card, border: border, title: title, sub: sub, accent: accentColor,
                   onTap: () async {
                     final picked = await showTimePicker(
                         context: context, initialTime: _selectedTime);
@@ -151,24 +152,28 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       ? null
                       : () async {
                     if (_formKey.currentState!.validate()) {
-                      final success = await tasksController.addTask(
+                      tasksController.addTask(
                         title: _titleController.text.trim(),
                         description: _descController.text.trim(),
                         dueDate: _combined,
                         priority: _priority,
                       );
-
-                      if (success) {
-                        Get.back();
-                      }
+                      Get.back();
                     }
                   },
                   child: tasksController.isLoading.value
-                      ? const SizedBox(height: 24, width: 24,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                      : const Text('Create Task',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ? const SizedBox(
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5
+                    ),
+                  )
+                      : const Text(
+                    'Create Task',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               )),
               const SizedBox(height: 20),
@@ -185,6 +190,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     required String label, required String value,
     required Color card, required Color border,
     required Color title, required Color sub,
+    required Color accent,
     required VoidCallback onTap,
   }) =>
       GestureDetector(
@@ -200,7 +206,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             Text(label, style: TextStyle(color: sub, fontSize: 11, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Row(children: [
-              Icon(icon, size: 14, color: kAccent),
+              Icon(icon, size: 14, color: accent),
               const SizedBox(width: 8),
               Flexible(child: Text(value, overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: title, fontSize: 13, fontWeight: FontWeight.w600))),

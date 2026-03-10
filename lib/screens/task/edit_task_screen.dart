@@ -167,10 +167,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                       ? null
                       : () async {
                     if (_formKey.currentState!.validate()) {
-                      await tasksController.updateTask(
+                      tasksController.updateTask(
                         taskId: widget.task.id,
-                        title: _titleController.text,
-                        description: _descController.text,
+                        title: _titleController.text.trim(),
+                        description: _descController.text.trim(),
                         dueDate: _combined,
                         priority: _priority,
                       );
